@@ -1,0 +1,22 @@
+# Core
+requests
+python-dotenv
+pydantic
+
+# Database
+sqlalchemy
+psycopg2-binary
+pgvector
+
+# Ingestion
+biopython
+unstructured[pdf]
+
+# Chunking & Embeddings
+sentence-transformers
+huggingface-hub
+tiktoken
+numpy
+
+# Testing
+pytest 
