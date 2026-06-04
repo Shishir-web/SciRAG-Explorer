@@ -10,7 +10,7 @@ pgvector
 
 # Ingestion
 biopython
-"unstructured[pdf]"
+unstructured[pdf]
 
 # Chunking & Embeddings
 sentence-transformers
@@ -34,7 +34,7 @@ torch
 
 # API
 fastapi
-"uvicorn[standard]"
+uvicorn[standard]
 sse-starlette
 slowapi
 httpx
