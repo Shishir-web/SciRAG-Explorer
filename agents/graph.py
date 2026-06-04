@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from agents.state       import AgentState
-from agents.retriever   import retriever_node
+from agents.retriever   import retrieve_node
 from agents.synthesiser import synthesiser_node
 from agents.critic      import critic_node
 
@@ -19,7 +19,7 @@ def build_graph() -> StateGraph:
     graph = StateGraph()
 
     # Register nodes
-    graph.add_node("retriever",   retriever_node)
+    graph.add_node("retriever",   retrieve_node)
     graph.add_node("synthesiser", synthesiser_node)
     graph.add_node("critic",      critic_node)
 
