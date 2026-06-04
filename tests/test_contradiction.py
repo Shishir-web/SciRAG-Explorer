@@ -33,7 +33,6 @@ CHUNK_C = make_chunk("c3", "paper:003",
 # --- NLI detector tests ---
 
 def test_detect_contradictions_returns_conflicts():
-    """Mock the NLI pipeline to return a contradiction label."""
     mock_result = {
         "labels": ["contradiction", "neutral", "entailment"],
         "scores": [0.92, 0.05, 0.03],
@@ -46,7 +45,6 @@ def test_detect_contradictions_returns_conflicts():
     assert all(p.is_conflict for p in conflicts)
 
 def test_same_paper_chunks_skipped():
-    """Chunks from the same paper should never be compared."""
     same_paper = [
         make_chunk("c1", "paper:001", "IL-6 decreased significantly."),
         make_chunk("c2", "paper:001", "TNF-alpha also decreased."),
@@ -59,14 +57,12 @@ def test_same_paper_chunks_skipped():
     with patch("contradiction.nli_detector.get_nli_pipeline") as mock_pipe:
         mock_pipe.return_value = lambda **kwargs: mock_result
         conflicts = detect_contradictions(same_paper)
-    # Same paper — should return no conflicts regardless of NLI score
     assert len(conflicts) == 0
 
 def test_low_confidence_not_flagged():
-    """Contradictions below threshold should not be flagged."""
     mock_result = {
         "labels": ["contradiction", "neutral", "entailment"],
-        "scores": [0.50, 0.30, 0.20],   # below CONTRADICTION_THRESHOLD
+        "scores": [0.50, 0.30, 0.20],
         "sequence": "test",
     }
     with patch("contradiction.nli_detector.get_nli_pipeline") as mock_pipe:
@@ -79,31 +75,20 @@ def test_low_confidence_not_flagged():
 
 def test_grounding_marks_entailed_as_grounded():
     answer = "IL-6 was reduced [paper:001]."
-    mock_result = {
-        "labels": ["entailment", "neutral", "contradiction"],
-        "scores": [0.88, 0.08, 0.04],
-        "sequence": "test",
-    }
-    with patch("contradiction.grounding.get_nli_pipeline") as mock_pipe:
-        mock_pipe.return_value = lambda **kwargs: mock_result
+    with patch("contradiction.grounding.classify_pair",
+               return_value=("entailment", 0.88)):
         result = check_citation_grounding(answer, [CHUNK_A])
     assert result["paper:001"]["grounded"] is True
 
 def test_grounding_marks_contradiction_as_ungrounded():
     answer = "IL-6 was reduced [paper:002]."
-    mock_result = {
-        "labels": ["contradiction", "neutral", "entailment"],
-        "scores": [0.87, 0.09, 0.04],
-        "sequence": "test",
-    }
-    with patch("contradiction.grounding.get_nli_pipeline") as mock_pipe:
-        mock_pipe.return_value = lambda **kwargs: mock_result
+    with patch("contradiction.grounding.classify_pair",
+               return_value=("contradiction", 0.87)):
         result = check_citation_grounding(answer, [CHUNK_B])
     assert result["paper:002"]["grounded"] is False
 
 def test_uncited_papers_not_checked():
-    """Papers not mentioned in the answer should not appear in results."""
-    answer = "Some generic finding."   # no paper_id cited
+    answer = "Some generic finding."
     result = check_citation_grounding(answer, [CHUNK_A, CHUNK_B])
     assert len(result) == 0
 

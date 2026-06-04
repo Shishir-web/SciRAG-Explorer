@@ -1,5 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
+
+# Import chunk_models first so SQLAlchemy registers both models together
+import db.chunk_models  # noqa: F401
 from ingestion.arxiv_client import fetch_arxiv
 
 MOCK_ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -14,6 +17,7 @@ MOCK_ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
     <link title="pdf" href="https://arxiv.org/pdf/2401.00001v1"/>
   </entry>
 </feed>"""
+
 
 def test_fetch_arxiv_parses_correctly():
     mock_resp = MagicMock()
@@ -30,6 +34,7 @@ def test_fetch_arxiv_parses_correctly():
     assert "Neuroinflammation" in p.title
     assert "Jane Smith" in p.authors
     assert p.abstract.startswith("This paper")
+
 
 def test_paper_id_format():
     """IDs must be namespaced to avoid collisions between sources."""
