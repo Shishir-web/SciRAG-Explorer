@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from api.main import app
@@ -45,23 +44,22 @@ def test_health_endpoint_degraded_when_db_down():
 
 def test_query_returns_200_with_valid_input():
     with patch("api.main.run_query", return_value=MOCK_STATE), \
-         patch("asyncio.get_event_loop") as mock_loop:
-        mock_loop.return_value.run_in_executor = AsyncMock(
-            return_value=MOCK_STATE
-        )
+         patch("api.main.asyncio") as mock_asyncio:
+        mock_loop = MagicMock()
+        mock_asyncio.get_event_loop.return_value = mock_loop
+        mock_loop.run_in_executor = AsyncMock(return_value=MOCK_STATE)
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
     assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
+    assert "answer" in response.json()
 
 def test_query_response_shape():
     with patch("api.main.run_query", return_value=MOCK_STATE), \
-         patch("asyncio.get_event_loop") as mock_loop:
-        mock_loop.return_value.run_in_executor = AsyncMock(
-            return_value=MOCK_STATE
-        )
+         patch("api.main.asyncio") as mock_asyncio:
+        mock_loop = MagicMock()
+        mock_asyncio.get_event_loop.return_value = mock_loop
+        mock_loop.run_in_executor = AsyncMock(return_value=MOCK_STATE)
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
@@ -86,8 +84,10 @@ def test_query_missing_field_returns_422():
 
 def test_query_agent_failure_returns_500():
     with patch("api.main.run_query", side_effect=RuntimeError("Graph crashed")), \
-         patch("asyncio.get_event_loop") as mock_loop:
-        mock_loop.return_value.run_in_executor = AsyncMock(
+         patch("api.main.asyncio") as mock_asyncio:
+        mock_loop = MagicMock()
+        mock_asyncio.get_event_loop.return_value = mock_loop
+        mock_loop.run_in_executor = AsyncMock(
             side_effect=RuntimeError("Graph crashed")
         )
         response = client.post("/query", json={
@@ -105,8 +105,10 @@ def test_has_conflicts_true_when_conflicts_present():
         }],
     }
     with patch("api.main.run_query", return_value=state_with_conflict), \
-         patch("asyncio.get_event_loop") as mock_loop:
-        mock_loop.return_value.run_in_executor = AsyncMock(
+         patch("api.main.asyncio") as mock_asyncio:
+        mock_loop = MagicMock()
+        mock_asyncio.get_event_loop.return_value = mock_loop
+        mock_loop.run_in_executor = AsyncMock(
             return_value=state_with_conflict
         )
         response = client.post("/query", json={

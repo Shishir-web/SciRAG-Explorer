@@ -1,8 +1,9 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Import chunk_models first so SQLAlchemy registers both models together
-import db.chunk_models  # noqa: F401
+# Import both models so SQLAlchemy registers them together
+from db.models import Paper
+from db.chunk_models import Chunk  # noqa: F401
 from ingestion.arxiv_client import fetch_arxiv
 
 MOCK_ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
