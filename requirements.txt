@@ -4,7 +4,7 @@ python-dotenv
 pydantic
 
 # Database
-sqlalchemy
+sqlalchemy==2.0.36
 psycopg2-binary
 pgvector
 
@@ -45,3 +45,7 @@ datasets
 
 # Testing
 pytest
+
+httpx  # add to requirements.txt
+
+langchain-google-vertexai  # replaces langchain_community for VertexAI
