@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from agents.state       import AgentState
-from agents.retriever   import retrieve_node
+from agents.retriever   import retriever_node
 from agents.synthesiser import synthesiser_node
 from agents.critic      import critic_node
 
@@ -10,31 +10,32 @@ def should_retry(state: AgentState) -> str:
     Conditional edge function.
     Returns the name of the next node to route to.
     """
-
     if state["passed"]:
         return "end"
-    return "retriever" # loop back for another pass
+    return "retriever"
+
 
 def build_graph() -> StateGraph:
-    graph = StateGraph()
+    # Pass AgentState explicitly — required in langgraph >= 0.1
+    graph = StateGraph(AgentState)
 
     # Register nodes
-    graph.add_node("retriever",   retrieve_node)
+    graph.add_node("retriever",   retriever_node)
     graph.add_node("synthesiser", synthesiser_node)
     graph.add_node("critic",      critic_node)
 
     # Linear edges
-    graph.add_edge("retriever", "synthesiser")
+    graph.add_edge("retriever",   "synthesiser")
     graph.add_edge("synthesiser", "critic")
 
-    # Conditional edge from critic back to retriever for another pass
-    graph.add_conditonal_edges(
+    # Conditional edge from critic: retry or exit
+    graph.add_conditional_edges(
         "critic",
         should_retry,
         {
             "end":       END,
             "retriever": "retriever",
-        }
+        },
     )
 
     # Entry point
@@ -42,5 +43,6 @@ def build_graph() -> StateGraph:
 
     return graph.compile()
 
-# Module-level compiled graph - import this everywhere
+
+# Module-level compiled graph
 scirag_graph = build_graph()
