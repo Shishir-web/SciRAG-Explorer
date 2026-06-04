@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from api.main import app
 
@@ -43,11 +43,7 @@ def test_health_endpoint_degraded_when_db_down():
 # ── Query endpoint ────────────────────────────────────────────
 
 def test_query_returns_200_with_valid_input():
-    with patch("api.main.run_query", return_value=MOCK_STATE), \
-         patch("api.main.asyncio") as mock_asyncio:
-        mock_loop = MagicMock()
-        mock_asyncio.get_event_loop.return_value = mock_loop
-        mock_loop.run_in_executor = AsyncMock(return_value=MOCK_STATE)
+    with patch("api.main.run_query", return_value=MOCK_STATE):
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
@@ -55,11 +51,7 @@ def test_query_returns_200_with_valid_input():
     assert "answer" in response.json()
 
 def test_query_response_shape():
-    with patch("api.main.run_query", return_value=MOCK_STATE), \
-         patch("api.main.asyncio") as mock_asyncio:
-        mock_loop = MagicMock()
-        mock_asyncio.get_event_loop.return_value = mock_loop
-        mock_loop.run_in_executor = AsyncMock(return_value=MOCK_STATE)
+    with patch("api.main.run_query", return_value=MOCK_STATE):
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
@@ -83,13 +75,8 @@ def test_query_missing_field_returns_422():
     assert response.status_code == 422
 
 def test_query_agent_failure_returns_500():
-    with patch("api.main.run_query", side_effect=RuntimeError("Graph crashed")), \
-         patch("api.main.asyncio") as mock_asyncio:
-        mock_loop = MagicMock()
-        mock_asyncio.get_event_loop.return_value = mock_loop
-        mock_loop.run_in_executor = AsyncMock(
-            side_effect=RuntimeError("Graph crashed")
-        )
+    with patch("api.main.run_query",
+               side_effect=RuntimeError("Graph crashed")):
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
@@ -104,13 +91,7 @@ def test_has_conflicts_true_when_conflicts_present():
             "confidence": 0.91,
         }],
     }
-    with patch("api.main.run_query", return_value=state_with_conflict), \
-         patch("api.main.asyncio") as mock_asyncio:
-        mock_loop = MagicMock()
-        mock_asyncio.get_event_loop.return_value = mock_loop
-        mock_loop.run_in_executor = AsyncMock(
-            return_value=state_with_conflict
-        )
+    with patch("api.main.run_query", return_value=state_with_conflict):
         response = client.post("/query", json={
             "query": "What do papers say about GLP-1 and inflammation?"
         })
@@ -120,12 +101,11 @@ def test_has_conflicts_true_when_conflicts_present():
 # ── Paper count endpoint ──────────────────────────────────────
 
 def test_paper_count_endpoint():
-    mock_engine = MagicMock()
+    mock_engine  = MagicMock()
     mock_session = MagicMock()
     mock_session.__enter__ = lambda s: s
     mock_session.__exit__  = MagicMock(return_value=False)
     mock_session.execute.return_value.scalar.side_effect = [312, 2847]
-    mock_engine.return_value = mock_engine
 
     with patch("api.main.get_engine", return_value=mock_engine), \
          patch("api.main.Session",    return_value=mock_session):

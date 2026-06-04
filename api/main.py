@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import concurrent.futures
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -95,11 +96,8 @@ async def health():
 async def query(request: Request, body: QueryRequest):
     if body.stream:
         return await stream_query(request, body)
-
     try:
-        # run_in_executor runs the sync function in a thread pool
-        loop  = asyncio.get_event_loop()
-        state = await loop.run_in_executor(None, run_query, body.query)
+        state = run_query(body.query)
         return format_response(state)
     except Exception as e:
         raise HTTPException(
@@ -117,8 +115,7 @@ async def stream_query(request: Request, body: QueryRequest):
             }
             await asyncio.sleep(0)
 
-            loop  = asyncio.get_event_loop()
-            state = await loop.run_in_executor(None, run_query, body.query)
+            state = run_query(body.query)
 
             yield {
                 "event": "status",
