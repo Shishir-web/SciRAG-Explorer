@@ -6,26 +6,30 @@ from agents.critic import critic_node, PASS_THRESHOLD
 from agents.graph import should_retry, build_graph
 from retrieval.dense import RetrievedChunk
 
+
 def make_state(**overrides) -> AgentState:
     base: AgentState = {
-        "query":        "test query",
-        "chunks":       [],
+        "query":            "test query",
+        "chunks":           [],
         "retrieval_passes": 0,
-        "answer":       "",
-        "citations":    [],
-        "critic_score": 0.0,
-        "critic_feedback": "",
-        "passed":       False,
+        "answer":           "test answer",
+        "citations":        [],
+        "critic_score":     0.0,
+        "critic_feedback":  "",
+        "passed":           False,
+        "conflicts":        [],
+        "grounding":        {},
     }
     return {**base, **overrides}
 
 
 def make_chunk(n=1):
     return RetrievedChunk(
-        paper_id=f"paper_{n}",chunk_id=f"c{n}",
-        section="abstract",chunk_text=f"This is the text of chunk {n} from paper {n}.",
+        chunk_id=f"c{n}", paper_id=f"paper:{n}",
+        section="abstract", chunk_text="GLP-1 reduces IL-6.",
         score=0.9, rank=n,
     )
+
 
 # --- should_retry routing ---
 
@@ -48,7 +52,6 @@ def test_retriever_increments_passes():
     assert len(result["chunks"]) == 2
 
 def test_retriever_widens_search_on_retry():
-    """On second pass, dense_k should be larger (we just check it doesn't crash)."""
     mock_chunks = [make_chunk(1)]
     with patch("agents.retriever.retrieve", return_value=mock_chunks) as mock_ret:
         retriever_node(make_state(retrieval_passes=1))
@@ -65,7 +68,8 @@ def test_critic_sets_passed_true_above_threshold():
         '"citation_use":0.9,"overall":0.88,'
         '"feedback":"Good answer."}'
     )
-    with patch("agents.critic.CRITIC_LLM.invoke", return_value=mock_response):
+    with patch("agents.critic.ChatOpenAI") as mock_llm_class:
+        mock_llm_class.return_value.invoke.return_value = mock_response
         result = critic_node(make_state(chunks=[make_chunk()]))
     assert result["passed"] is True
     assert result["critic_score"] >= PASS_THRESHOLD
@@ -77,22 +81,25 @@ def test_critic_sets_passed_false_below_threshold():
         '"citation_use":0.4,"overall":0.43,'
         '"feedback":"Missing citations."}'
     )
-    with patch("agents.critic.CRITIC_LLM.invoke", return_value=mock_response):
+    with patch("agents.critic.ChatOpenAI") as mock_llm_class:
+        mock_llm_class.return_value.invoke.return_value = mock_response
         result = critic_node(make_state(chunks=[make_chunk()]))
     assert result["passed"] is False
 
 def test_critic_force_exits_after_max_passes():
-    """Even a low score should pass if retrieval_passes >= 2."""
     mock_response = MagicMock()
     mock_response.content = (
         '{"faithfulness":0.3,"coverage":0.3,'
         '"citation_use":0.3,"overall":0.30,'
         '"feedback":"Poor."}'
     )
-    with patch("agents.critic.CRITIC_LLM.invoke", return_value=mock_response):
-        result = critic_node(make_state(chunks=[make_chunk()],
-                                        retrieval_passes=2))
-    assert result["passed"] is True   # forced exit
+    with patch("agents.critic.ChatOpenAI") as mock_llm_class:
+        mock_llm_class.return_value.invoke.return_value = mock_response
+        result = critic_node(make_state(
+            chunks=[make_chunk()],
+            retrieval_passes=2,
+        ))
+    assert result["passed"] is True
 
 
 # --- Full graph smoke test ---
@@ -102,19 +109,24 @@ def test_graph_compiles():
     assert graph is not None
 
 def test_full_graph_returns_answer():
-    mock_chunks  = [make_chunk(1), make_chunk(2)]
-    mock_answer  = MagicMock()
+    mock_chunks = [make_chunk(1), make_chunk(2)]
+    mock_answer = MagicMock()
     mock_answer.content = "GLP-1 reduces neuroinflammation [paper:1]."
-    mock_critic  = MagicMock()
+    mock_critic = MagicMock()
     mock_critic.content = (
         '{"faithfulness":0.9,"coverage":0.9,'
         '"citation_use":0.9,"overall":0.9,'
         '"feedback":"Excellent."}'
     )
 
-    with patch("agents.retriever.retrieve",      return_value=mock_chunks), \
-         patch("agents.synthesiser.LLM.invoke",  return_value=mock_answer), \
-         patch("agents.critic.CRITIC_LLM.invoke",return_value=mock_critic):
+    with patch("agents.retriever.retrieve",                    return_value=mock_chunks), \
+         patch("agents.synthesiser.ChatOpenAI")             as mock_synth_llm, \
+         patch("agents.critic.ChatOpenAI")                  as mock_critic_llm, \
+         patch("agents.synthesiser.detect_contradictions",   return_value=[]), \
+         patch("agents.synthesiser.check_citation_grounding",return_value={}):
+
+        mock_synth_llm.return_value.invoke.return_value  = mock_answer
+        mock_critic_llm.return_value.invoke.return_value = mock_critic
 
         from agents import run_query
         result = run_query("GLP-1 neuroinflammation")

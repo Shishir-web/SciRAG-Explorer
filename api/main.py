@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -21,8 +20,6 @@ from api.middleware   import RequestLoggingMiddleware
 from api.dependencies import limiter, check_db_health, get_engine
 from agents           import run_query
 
-
-# ── App setup ────────────────────────────────────────────────
 
 app = FastAPI(
     title       = "SciRAG Explorer API",
@@ -44,10 +41,7 @@ app.add_middleware(
 )
 
 
-# ── Helper ───────────────────────────────────────────────────
-
 def format_response(state: dict) -> QueryResponse:
-    """Convert raw AgentState dict to structured QueryResponse."""
     conflicts = [
         ConflictDetail(
             paper_id_a = c.get("paper_id_a", ""),
@@ -79,11 +73,8 @@ def format_response(state: dict) -> QueryResponse:
     )
 
 
-# ── Routes ───────────────────────────────────────────────────
-
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    """Health check — verifies API and DB are reachable."""
     db_status = check_db_health()
     return HealthResponse(
         status = "ok" if db_status == "ok" else "degraded",
@@ -102,21 +93,14 @@ async def health():
 )
 @limiter.limit("30/minute")
 async def query(request: Request, body: QueryRequest):
-    """
-    Run the full SciRAG agent graph for a query.
-    Returns a grounded, cited answer with contradiction flags.
-    """
     if body.stream:
         return await stream_query(request, body)
 
     try:
-        state = await asyncio.get_event_loop().run_in_executor(
-            None,
-            run_query,
-            body.query,
-        )
+        # run_in_executor runs the sync function in a thread pool
+        loop  = asyncio.get_event_loop()
+        state = await loop.run_in_executor(None, run_query, body.query)
         return format_response(state)
-
     except Exception as e:
         raise HTTPException(
             status_code = 500,
@@ -125,13 +109,6 @@ async def query(request: Request, body: QueryRequest):
 
 
 async def stream_query(request: Request, body: QueryRequest):
-    """
-    SSE streaming endpoint.
-    Emits events:
-      - status:  pipeline progress updates
-      - chunk:   answer tokens as they generate
-      - done:    final structured response JSON
-    """
     async def event_generator():
         try:
             yield {
@@ -154,7 +131,6 @@ async def stream_query(request: Request, body: QueryRequest):
             }
             await asyncio.sleep(0)
 
-            # Stream answer word by word
             words = state["answer"].split(" ")
             for i, word in enumerate(words):
                 yield {
@@ -181,7 +157,6 @@ async def stream_query(request: Request, body: QueryRequest):
 
 @app.get("/papers/count")
 async def paper_count():
-    """Quick stats endpoint — useful for the portfolio demo."""
     engine = get_engine()
     with Session(engine) as session:
         papers = session.execute(
@@ -190,5 +165,4 @@ async def paper_count():
         chunks = session.execute(
             text("SELECT count(*) FROM chunks WHERE embedding IS NOT NULL")
         ).scalar()
-
     return {"papers": papers, "chunks_embedded": chunks}
