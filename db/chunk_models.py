@@ -17,7 +17,7 @@ class Chunk(Base):
     char_end   = Column(Integer)
     token_count= Column(Integer)
     chunk_index= Column(Integer) # the n in the chunk id, used for ordering chunks within a paper
-    metadata   = Column(JSON)
+    raw_metadata   = Column(JSON)
 
     #The embedding vector for this chunk, stored as a pgvector column
     embedding  = Column(Vector(EMBEDDING_DIM))
