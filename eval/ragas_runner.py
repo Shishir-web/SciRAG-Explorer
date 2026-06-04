@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import (
+from ragas.metrics.collections import (
     faithfulness,
     answer_relevancy,
     context_precision,
@@ -42,16 +42,14 @@ def run_single_eval(sample: GoldenSample) -> EvalResult:
         contexts = [c.chunk_text for c in state.get("chunks", [])]
         answer   = state.get("answer", "")
 
-        # RAGAS expects a HuggingFace Dataset with specific columns
         ragas_data = Dataset.from_dict({
-            "question":         [sample.query],
-            "answer":           [answer],
-            "contexts":         [contexts],
-            "ground_truth":     [sample.reference_answer],
+            "question":     [sample.query],
+            "answer":       [answer],
+            "contexts":     [contexts],
+            "ground_truth": [sample.reference_answer],
         })
 
-        # Use the same LLM as the pipeline for consistency
-        llm        = LangchainLLMWrapper(
+        llm = LangchainLLMWrapper(
             ChatOpenAI(model="gpt-4o-mini", temperature=0)
         )
         embeddings = LangchainEmbeddingsWrapper(
@@ -70,7 +68,7 @@ def run_single_eval(sample: GoldenSample) -> EvalResult:
             embeddings = embeddings,
         )
 
-        df = scores.to_pandas()
+        df  = scores.to_pandas()
         row = df.iloc[0]
 
         return EvalResult(
@@ -104,7 +102,7 @@ def run_single_eval(sample: GoldenSample) -> EvalResult:
 
 def run_full_eval(samples: list[GoldenSample],
                   max_samples: int | None = None) -> list[EvalResult]:
-    """Run eval on the full golden dataset (or a subset for CI speed)."""
+    """Run eval on the full golden dataset or a subset for CI speed."""
     if max_samples:
         samples = samples[:max_samples]
 
