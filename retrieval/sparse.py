@@ -15,26 +15,24 @@ def build_bm25_index(session: Session) -> tuple[BM25Okapi, list[Chunk]]:
     return index, chunks
 
 def sparse_search(query: str, top_k: int = 20) -> list[RetrievedChunk]:
-    """ BM25 keyword search over all chunks.
+    """BM25 keyword search over all chunks.
     Returns top-k results sorted by BM25 score descending.
     """
     engine = create_engine(os.environ["POSTGRES__URL"])
     tokens = query.lower().split()
-
     with Session(engine) as session:
         index, chunks = build_bm25_index(session)
         scores = index.get_scores(tokens)
 
-    # Pair each chunk with its BM25 score and sort
     scored = sorted(
         zip(chunks, scores),
         key=lambda x: x[1],
-        resverse=True
+        reverse=True
     )[:top_k]
 
     return [
         RetrievedChunk(
-            chunk_idc=chunk.idc,
+            chunk_id=chunk.id,
             paper_id=chunk.paper_id,
             section=chunk.section,
             chunk_text=chunk.text,
@@ -42,5 +40,5 @@ def sparse_search(query: str, top_k: int = 20) -> list[RetrievedChunk]:
             rank=i + 1,
         )
         for i, (chunk, score) in enumerate(scored)
-        if score > 0 #BM25 score=0 means no keyword overlap at all
+        if score > 0
     ]
