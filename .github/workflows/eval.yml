@@ -1,0 +1,109 @@
+name: SciRAG Eval Harness
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Also run on a schedule — catches data drift
+  schedule:
+    - cron: "0 6 * * 1"   # every Monday 6am UTC
+
+jobs:
+  eval:
+    name: Run eval harness
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER:     user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB:       scirag
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests first
+        run: pytest tests/ -v --ignore=tests/test_eval_integration.py
+
+      - name: Initialise database
+        env:
+          POSTGRES_URL: postgresql://user:password@localhost:5432/scirag
+        run: python db/init_db.py
+
+      - name: Run ingestion (subset for CI speed)
+        env:
+          POSTGRES_URL:  postgresql://user:password@localhost:5432/scirag
+          NCBI_EMAIL:    ${{ secrets.NCBI_EMAIL }}
+          NCBI_API_KEY:  ${{ secrets.NCBI_API_KEY }}
+          HF_API_TOKEN:  ${{ secrets.HF_API_TOKEN }}
+        run: python ingestion/run_ingest.py --max-papers 20
+
+      - name: Run chunking + embedding
+        env:
+          POSTGRES_URL: postgresql://user:password@localhost:5432/scirag
+          HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
+        run: |
+          python chunking/run_chunk.py
+          python embeddings/run_embed.py
+
+      - name: Run eval harness (15 samples for CI speed)
+        env:
+          POSTGRES_URL:   postgresql://user:password@localhost:5432/scirag
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          HF_API_TOKEN:   ${{ secrets.HF_API_TOKEN }}
+        run: |
+          python eval/run_eval.py --max 15 --ci
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: eval/baseline_scores.json
+
+      - name: Comment eval scores on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs   = require('fs');
+            const data = JSON.parse(
+              fs.readFileSync('eval/baseline_scores.json', 'utf8')
+            );
+            const body = [
+              '## SciRAG Eval Results',
+              `| Metric | Score | Gate |`,
+              `|--------|-------|------|`,
+              `| Faithfulness      | ${data.mean_faithfulness.toFixed(3)}      | ≥ 0.82 |`,
+              `| Answer relevancy  | ${data.mean_answer_relevancy.toFixed(3)}  | ≥ 0.75 |`,
+              `| Context precision | ${data.mean_context_precision.toFixed(3)} | ≥ 0.70 |`,
+              `| Context recall    | ${data.mean_context_recall.toFixed(3)}    | ≥ 0.65 |`,
+              `| **Result**        | **${data.passed ? '✅ PASS' : '❌ FAIL'}** | |`,
+            ].join('\n');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              body,
+            });

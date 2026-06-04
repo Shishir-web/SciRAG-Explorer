@@ -10,7 +10,7 @@ pgvector
 
 # Ingestion
 biopython
-unstructured[pdf]
+"unstructured[pdf]"
 
 # Chunking & Embeddings
 sentence-transformers
@@ -18,5 +18,30 @@ huggingface-hub
 tiktoken
 numpy
 
+# Retrieval
+rank-bm25
+cohere
+
+# Agents
+langgraph
+langchain
+langchain-openai
+openai
+
+# Contradiction detection
+transformers
+torch
+
+# API
+fastapi
+"uvicorn[standard]"
+sse-starlette
+slowapi
+httpx
+
+# Eval
+ragas
+datasets
+
 # Testing
-pytest 
+pytest

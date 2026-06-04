@@ -1,0 +1,47 @@
+[
+  {
+    "id": "q001",
+    "query": "What effect do GLP-1 receptor agonists have on IL-6 levels in neuroinflammation studies?",
+    "reference_answer": "GLP-1 receptor agonists have been shown to significantly reduce IL-6 levels in patients with neuroinflammatory conditions, with reductions of 30-40% reported in randomised controlled trials.",
+    "ground_truth_paper_ids": ["pubmed:38291045", "pubmed:37845123"],
+    "expected_has_conflict": false,
+    "topic": "GLP-1 neuroinflammation",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q002",
+    "query": "Do all studies agree on the efficacy of CRISPR base editing for treating sickle cell disease?",
+    "reference_answer": "No. While several studies report high efficacy of CRISPR base editing in reactivating fetal haemoglobin, at least one study raises concerns about off-target edits at non-intended genomic sites, suggesting efficacy and safety findings are not yet fully consistent across the literature.",
+    "ground_truth_paper_ids": ["arxiv:2312.04471", "pubmed:38102938"],
+    "expected_has_conflict": true,
+    "topic": "CRISPR base editing",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q003",
+    "query": "What is the proposed mechanism by which the gut microbiome influences anxiety?",
+    "reference_answer": "The gut-brain axis is implicated via vagal nerve signalling, microbial production of short-chain fatty acids, and modulation of serotonin precursors. Dysbiosis has been associated with altered HPA axis activity and increased anxiety-like behaviour in animal models.",
+    "ground_truth_paper_ids": ["pubmed:37901234"],
+    "expected_has_conflict": false,
+    "topic": "microbiome mental health",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q004",
+    "query": "What sample sizes are typical in RCTs studying GLP-1 agonists and neuroinflammation?",
+    "reference_answer": "Sample sizes in this area typically range from 80 to 200 participants, with follow-up periods of 12 to 24 weeks.",
+    "ground_truth_paper_ids": ["pubmed:38291045"],
+    "expected_has_conflict": false,
+    "topic": "GLP-1 neuroinflammation",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q005",
+    "query": "What biomarkers are most commonly used to measure neuroinflammation in clinical studies?",
+    "reference_answer": "IL-6, TNF-alpha, and C-reactive protein (CRP) are the most frequently reported biomarkers. Some studies also use neurofilament light chain (NfL) as a marker of neuronal damage.",
+    "ground_truth_paper_ids": ["pubmed:38291045", "pubmed:37845123", "arxiv:2401.09182"],
+    "expected_has_conflict": false,
+    "topic": "GLP-1 neuroinflammation",
+    "difficulty": "easy"
+  }
+]

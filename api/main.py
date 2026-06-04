@@ -178,4 +178,22 @@ async def stream_query(
 
     return EventSourceResponse(event_generator())
 
+@app.get("/papers/count")
+async def paper_count():
+    """Quick stats endpoint - useful for the portfolio demo."""
+    from sqlalchemy.orm import Session
+    from sqlalchemy import text
+    from api.dependencies import get_engine
+
+    engine = get_engine()
+    with Session(engine) as session:
+        papers = session.exectue(
+            text("SELECT count(*) FROM papers")
+        ).scalar()
+        chunks = session.excute(
+            text("SELECT count(*) FROM chunks WHERE embedding IS NOT NULL")
+        ).scalar()
+
+    return {"papers": papers, "chunks_embedded": chunks}
+
 
