@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from embeddings.bge_embedder import embed_texts
 
 @dataclass
-class RetrievalChunk:
+class RetrievedChunk:
     chunk_id:    str
     paper_id:    str
     section:     str
@@ -13,7 +13,7 @@ class RetrievalChunk:
     score:       float
     rank:        int
 
-def dense_search(query: str, top_k: int = 20) -> list[RetrievalChunk]:
+def dense_search(query: str, top_k: int = 20) -> list[RetrievedChunk]:
     """Embed the query and retrieve top-k chunks by cosine similarity
     using pgvector's <=> operator (cosine distance)."""
     engine = create_engine(os.environ["POSTGRES__URL"])
@@ -43,7 +43,7 @@ def dense_search(query: str, top_k: int = 20) -> list[RetrievalChunk]:
         }).fetchall()
 
     return [
-        RetrievalChunk(
+        RetrievedChunk(
             chunk_id=r.chunk_id,
             paper_id=r.paper_id,
             section=r.section,

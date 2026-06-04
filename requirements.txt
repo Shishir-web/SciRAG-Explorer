@@ -26,6 +26,7 @@ cohere
 langgraph
 langchain
 langchain-openai
+langchain-community
 openai
 
 # Contradiction detection
@@ -45,7 +46,3 @@ datasets
 
 # Testing
 pytest
-
-httpx  # add to requirements.txt
-
-langchain-google-vertexai  # replaces langchain_community for VertexAI
