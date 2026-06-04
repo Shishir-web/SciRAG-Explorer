@@ -1,8 +1,8 @@
 from sqlalchemy import Column, String, Text, DateTime, JSON, UniqueConstraint
-from sqlalchemy.orm import DeclerativeBase
+from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime, timezone
 
-class Base(DeclerativeBase):
+class Base(DeclarativeBase):
     pass
 
 class Paper(Base):
