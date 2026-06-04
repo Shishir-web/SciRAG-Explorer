@@ -16,5 +16,5 @@ class Chunk(Base):
     char_end    = Column(Integer)
     token_count = Column(Integer)
     chunk_index = Column(Integer)
-    metadata    = Column(JSON)
+    raw_metadata    = Column(JSON)
     embedding   = Column(Vector(EMBEDDING_DIM))
