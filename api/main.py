@@ -83,15 +83,16 @@ async def health():
     )
 
 
-@app.post(
-    "/query",
-    response_model = QueryResponse,
-    responses      = {
-        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
-        422: {"model": ErrorResponse, "description": "Validation error"},
-        500: {"model": ErrorResponse, "description": "Internal server error"},
-    },
-)
+@app.post("/query")
+def query(request: QueryRequest):
+    state = run_query(request.query)
+    return {
+        "answer":       state.get("answer", ""),
+        "citations":    state.get("citations", []),
+        "has_conflicts": bool(state.get("conflicts")),
+        "conflicts":    state.get("conflicts", []),
+    }
+
 @limiter.limit("30/minute")
 async def query(request: Request, body: QueryRequest):
     if body.stream:

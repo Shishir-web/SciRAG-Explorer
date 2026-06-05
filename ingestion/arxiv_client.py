@@ -60,5 +60,5 @@ def fetch_arxiv(query: str, max_results: int = 100) -> Iterator[Paper]:
             published= published,
             doi      = doi,
             url      = pdf_url,
-            raw_meta = {"arxiv_id": arxiv_id},
+            raw_metadata = {"arxiv_id": arxiv_id},
         )
