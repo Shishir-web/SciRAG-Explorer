@@ -33,7 +33,7 @@ def upsert_papers(session: Session, papers: list[Paper]):
                 published   = paper.published,
                 doi         = paper.doi,
                 url         = paper.url,
-                raw_meta    = paper.raw_meta,
+                raw_metadata    = paper.raw_metadata,
                 ingested_at = paper.ingested_at,
             )
             .on_conflict_do_nothing(index_elements=["id"])
