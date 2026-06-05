@@ -1,12 +1,12 @@
 import os
 import json
 import asyncio
-import concurrent.futures
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sse_starlette.sse import EventSourceResponse
@@ -83,22 +83,21 @@ async def health():
     )
 
 
-@app.post("/query")
-def query(request: QueryRequest):
-    state = run_query(request.query)
-    return {
-        "answer":       state.get("answer", ""),
-        "citations":    state.get("citations", []),
-        "has_conflicts": bool(state.get("conflicts")),
-        "conflicts":    state.get("conflicts", []),
-    }
-
+@app.post(
+    "/query",
+    response_model = QueryResponse,
+    responses      = {
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+)
 @limiter.limit("30/minute")
 async def query(request: Request, body: QueryRequest):
     if body.stream:
         return await stream_query(request, body)
     try:
-        state = run_query(body.query)
+        state = await run_in_threadpool(run_query, body.query)
         return format_response(state)
     except Exception as e:
         raise HTTPException(
@@ -116,7 +115,7 @@ async def stream_query(request: Request, body: QueryRequest):
             }
             await asyncio.sleep(0)
 
-            state = run_query(body.query)
+            state = await run_in_threadpool(run_query, body.query)
 
             yield {
                 "event": "status",
