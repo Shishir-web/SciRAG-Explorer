@@ -5,9 +5,8 @@ on:
     branches: [main]
   push:
     branches: [main]
-  # Also run on a schedule — catches data drift
   schedule:
-    - cron: "0 6 * * 1"   # every Monday 6am UTC
+    - cron: "0 6 * * 1"
 
 jobs:
   eval:
@@ -42,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run unit tests first
+      - name: Run unit tests
         run: pytest tests/ -v --ignore=tests/test_eval_integration.py
 
       - name: Initialise database
@@ -58,7 +57,7 @@ jobs:
           HF_API_TOKEN:  ${{ secrets.HF_API_TOKEN }}
         run: python ingestion/run_ingest.py --max-papers 20
 
-      - name: Run chunking + embedding
+      - name: Run chunking and embedding
         env:
           POSTGRES_URL: postgresql://user:password@localhost:5432/scirag
           HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
@@ -66,14 +65,13 @@ jobs:
           python chunking/run_chunk.py
           python embeddings/run_embed.py
 
-      - name: Run eval harness (15 samples for CI speed)
+      - name: Run eval harness
         env:
           POSTGRES_URL:   postgresql://user:password@localhost:5432/scirag
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
           HF_API_TOKEN:   ${{ secrets.HF_API_TOKEN }}
-        run: |
-          python eval/run_eval.py --max 15 --ci
+        run: python eval/run_eval.py --max 15 --ci
 
       - name: Upload eval report
         if: always()
